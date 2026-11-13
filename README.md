@@ -35,6 +35,7 @@ reported on 13 November 2026.
 ## How it runs
 
 `main.py` (Python 3.13 stdlib only) copies the bundled `entry.png` to
-`$MAKEFUN_OUTPUT_DIR/entry.png` (default `/output/entry.png`). Deterministic:
-two runs write byte-identical files. The image is 1024×1024 PNG, 792,129
-bytes (limit 1 MiB).
+`$MAKEFUN_OUTPUT_DIR/entry.png` (default `/output/entry.png`), then verifies
+the copy by comparing sha256 digests and prints the digest it wrote.
+Deterministic: two runs write byte-identical files. The image is 1024×1024
+PNG, 792,129 bytes (limit 1 MiB).
