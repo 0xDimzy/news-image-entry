@@ -14,8 +14,10 @@ Writes the image to /output/entry.png (or $MAKEFUN_OUTPUT_DIR/entry.png):
 exactly the bundled entry.png bytes, deterministically, on every run.
 """
 
+import hashlib
 import os
 import shutil
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -24,13 +26,38 @@ SOURCE = HERE / "entry.png"
 OUTPUT_DIR = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
 
 
-def main() -> None:
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def verify_copy(source: Path, target: Path) -> str:
+    """Return target's sha256 once it is proven byte-identical to source."""
+    digest = _sha256(target)
+    if digest != _sha256(source):
+        raise ValueError(f"verification failed: {target} differs from {source}")
+    return digest
+
+
+def main() -> int:
+    if not SOURCE.is_file():
+        print(f"missing bundled image: {SOURCE}", file=sys.stderr)
+        return 1
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     target = OUTPUT_DIR / "entry.png"
     shutil.copyfile(SOURCE, target)
     # Read back: the file the judge sees must be exactly the bundled bytes.
-    assert target.read_bytes() == SOURCE.read_bytes()
+    try:
+        digest = verify_copy(SOURCE, target)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"wrote {target} (sha256 {digest})")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
